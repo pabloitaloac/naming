@@ -29,7 +29,7 @@ The difference: a metaphor borrows meaning from another domain. A description ju
 
 ## 2. Real Words Dominate
 
-Real-word brand names have approximately **68.8% recall vs 38.1% for invented names** in testing. The brain follows the path of least resistance — a known word repurposed beats a coined word almost every time.
+Real-word brand names are commonly reported to be recalled far better than invented names (one widely repeated figure is 68.8% vs 38.1%; the original study is not cited, so treat the exact numbers as unverified). The brain follows the path of least resistance — a known word repurposed beats a coined word almost every time.
 
 This doesn't mean invented words are bad. It means they need to work harder. An invented word must be short, phonetically natural, and rooted in recognizable morphemes.
 
@@ -37,7 +37,7 @@ This doesn't mean invented words are bad. It means they need to work harder. An 
 Sentry, Vault, Linear, Stripe, Notion, Slack, Discord, Spark, Craft, Bear
 
 **Strong tier — invented but grounded:**
-Figma (from "figure"), Grafana (from "graph"), Vercel (from "versatile" + "accelerate"), Twilio (from "twilio" — twilight zone of telephony)
+Figma (from "figure"), Grafana (from "graph"), Vercel (from "versatile" + "accelerate"), Twilio (from "twilight zone" of telephony — origin story reported, not verified)
 
 **Weak tier — invented without roots:**
 Syncora, Brightrix, Nexagen — invented, no root recognition, interchangeable with each other

@@ -1,6 +1,6 @@
 # Phonosemantics — Sound and Meaning
 
-Phonosemantics is the study of how speech sounds carry inherent meaning. It's not arbitrary — research consistently shows that certain sounds evoke specific qualities. When a name's sounds align with the product's core attributes, there's roughly a **2:1 preference ratio** in testing.
+Phonosemantics is the study of how speech sounds carry inherent meaning. It's not arbitrary — research consistently shows that certain sounds evoke specific qualities. When a name's sounds align with the product's core attributes, people tend to prefer it (a "2:1 preference ratio" is often quoted, but no source is cited — treat it as unverified).
 
 This isn't magic. It's pattern recognition. Your brain has processed millions of words and built unconscious associations between sounds and meanings. Naming can leverage those associations.
 

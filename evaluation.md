@@ -186,7 +186,7 @@ FINALIST: [Name]
 Origin: [15-second story — why it's called this]
 Metaphor: [What concrete image it plants]
 Sound: [How it feels spoken aloud, key phonetic features]
-Score: [Total] / 100
+Score: [Total] / 110
 
 Strengths:
 - [Strongest quality]

@@ -85,7 +85,7 @@ New language and industry files welcome — see [CONTRIBUTING.md](CONTRIBUTING.m
 This skill is opinionated:
 
 - **Metaphor over thesaurus.** Don't search for synonyms of your product's category. Explore what else in the world works like your product.
-- **Real words over invented words.** Real-word brand names have ~68.8% recall vs ~38.1% for invented names. The brain follows the path of least resistance.
+- **Real words over invented words.** Real-word brand names are reported to be recalled far better than invented ones (exact figures unverified). The brain follows the path of least resistance.
 - **Story over sound.** A name with a great origin story and average sound will outperform a name with perfect phonetics and no story.
 - **Kill AI slop.** Suffixes like -ly, -ify, -able, meaningless portmanteaus, and thesaurus extraction produce polished-but-interchangeable names. This skill actively filters them out.
 
