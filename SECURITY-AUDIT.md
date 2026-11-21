@@ -2,6 +2,11 @@
 
 This fork of [glacierphonk/naming](https://github.com/glacierphonk/naming) was reviewed at upstream commit `e7af8a5` (2026-04-19) and hardened on 2026-11-21.
 
+| Commit | What it is |
+| ------ | ---------- |
+| `78d6becf12a6ad3689977f1fadca6c0ca295e90c` | **Reviewed hardened code — install this or a later reviewed commit** |
+| `e7af8a5` | Upstream base — **do not install** (broad pre-approved tools) |
+
 ## Review findings (upstream `e7af8a5`)
 
 - All 28 files read in full. No prompt injection, hidden instructions, invisible or bidirectional Unicode, encoded payloads, or unexpected network endpoints.

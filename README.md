@@ -20,12 +20,12 @@ When invoked, this skill guides Claude through a structured naming process:
 
 This is a security-hardened fork of [glacierphonk/naming](https://github.com/glacierphonk/naming). The upstream repo has **not** been reviewed and pre-approves broader tool access — do not install it from upstream. See [SECURITY-AUDIT.md](SECURITY-AUDIT.md).
 
-Install as a personal skill (all projects), pinned to the reviewed commit listed in SECURITY-AUDIT.md:
+Install as a personal skill (all projects), pinned to the reviewed hardened commit `78d6bec` (or a later commit on `main` that you have reviewed):
 
 ```bash
 mkdir -p ~/.claude/skills
 git clone https://github.com/pabloitaloac/naming.git ~/.claude/skills/naming
-git -C ~/.claude/skills/naming checkout <reviewed-commit-sha>
+git -C ~/.claude/skills/naming checkout 78d6becf12a6ad3689977f1fadca6c0ca295e90c
 ```
 
 The skill's `allowed-tools` pre-approves reading only `~/.claude/skills/naming/**`, so install it at exactly that path.
