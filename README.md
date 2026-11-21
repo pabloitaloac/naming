@@ -18,22 +18,17 @@ When invoked, this skill guides Claude through a structured naming process:
 
 ## Install
 
-### As a project skill (this project only)
+This is a security-hardened fork of [glacierphonk/naming](https://github.com/glacierphonk/naming). The upstream repo has **not** been reviewed and pre-approves broader tool access — do not install it from upstream. See [SECURITY-AUDIT.md](SECURITY-AUDIT.md).
 
-Clone or copy the repo contents into your project's `.claude/skills/naming/` directory:
-
-```bash
-# From your project root
-mkdir -p .claude/skills
-git clone https://github.com/glacierphonk/naming.git .claude/skills/naming
-```
-
-### As a personal skill (all projects)
+Install as a personal skill (all projects), pinned to the reviewed hardened commit `78d6bec` (or a later commit on `main` that you have reviewed):
 
 ```bash
 mkdir -p ~/.claude/skills
-git clone https://github.com/glacierphonk/naming.git ~/.claude/skills/naming
+git clone https://github.com/pabloitaloac/naming.git ~/.claude/skills/naming
+git -C ~/.claude/skills/naming checkout 78d6becf12a6ad3689977f1fadca6c0ca295e90c
 ```
+
+The skill's `allowed-tools` pre-approves reading only `~/.claude/skills/naming/**`, so install it at exactly that path.
 
 ## Usage
 
@@ -85,7 +80,7 @@ New language and industry files welcome — see [CONTRIBUTING.md](CONTRIBUTING.m
 This skill is opinionated:
 
 - **Metaphor over thesaurus.** Don't search for synonyms of your product's category. Explore what else in the world works like your product.
-- **Real words over invented words.** Real-word brand names have ~68.8% recall vs ~38.1% for invented names. The brain follows the path of least resistance.
+- **Real words over invented words.** Real-word brand names are reported to be recalled far better than invented ones (exact figures unverified). The brain follows the path of least resistance.
 - **Story over sound.** A name with a great origin story and average sound will outperform a name with perfect phonetics and no story.
 - **Kill AI slop.** Suffixes like -ly, -ify, -able, meaningless portmanteaus, and thesaurus extraction produce polished-but-interchangeable names. This skill actively filters them out.
 

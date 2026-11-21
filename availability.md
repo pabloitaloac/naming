@@ -81,7 +81,7 @@ Focus availability effort on platform-specific checks where the exact name may a
 - For open source, the org name matters more than the repo name
 
 **Package registries:**
-- **npm:** `npm view [name]` or check npmjs.com/package/[name]
+- **npm:** the script's `npm` platform (queries registry.npmjs.org directly), or check npmjs.com/package/[name]
 - **PyPI:** pypi.org/project/[name]
 - **crates.io:** crates.io/crates/[name]
 - **Go modules:** pkg.go.dev/[name]
@@ -118,6 +118,7 @@ For serious products, do a basic trademark search. You don't need a lawyer for i
 - **EUIPO TMview** (EU trademarks): tmdn.org/tmview
 - **WIPO Global Brand Database** (international): branddb.wipo.int
 - **Google Patents / Trademarks:** Quick supplementary search
+- **Trademark-capable MCP:** if the user opted in to third-party services and a connected MCP offers trademark search (for example Instant Domain Search covers USPTO records), run it for every finalist
 
 **What to look for:**
 - Exact matches in your product category (Nice Classification)
@@ -254,23 +255,13 @@ When scoring searchability in the evaluation rubric:
 
 ## Quick Availability Check Script
 
-For technical users, automate the tedious parts:
+Use the bundled script instead of hand-written whois/curl commands. It validates the name, uses registry data (RDAP) for domains, and reports UNCLEAR instead of guessing when a registry does not answer cleanly:
 
 ```bash
-NAME="yourname"
-
-# Domain check (requires 'whois' or API)
-whois ${NAME}.com | grep -i "no match\|not found"
-whois ${NAME}.dev | grep -i "no match\|not found"
-whois ${NAME}.io | grep -i "no match\|not found"
-
-# GitHub org check
-curl -s -o /dev/null -w "%{http_code}" https://github.com/${NAME}
-# 404 = available, 200 = taken
-
-# npm check
-npm view ${NAME} 2>&1 | grep -i "not found"
-# "not found" = available
+bash ~/.claude/skills/naming/scripts/check-availability.sh yourname domain github npm
+TLDS="com app co" bash ~/.claude/skills/naming/scripts/check-availability.sh yourname domain
 ```
 
-Note: Automate for speed but always verify manually before committing. Automated checks can give false positives.
+If the user opted in to third-party services and a registry-backed domain MCP is connected (for example Instant Domain Search, GoDaddy or Porkbun), prefer it for domains and pricing.
+
+Note: automated checks can be wrong. Confirm at a registrar before buying.
