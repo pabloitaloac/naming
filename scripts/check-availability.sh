@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # check-availability.sh — Quick availability check for a product name
 # Usage: bash check-availability.sh <name> [platforms...]
-# Platforms: domain, npm, pypi, github, crates, rubygems, wp, telegram
+# Platforms: domain, npm, pypi, github, ghrepo:<org>, crates, rubygems, wp, telegram
 # If no platforms are given, checks: domain github npm
 # Domain TLDs default to "com dev io"; override with TLDS="com app co".
 #
@@ -12,19 +12,26 @@
 #               treat UNCLEAR as available or taken.
 #
 # Only the candidate name is sent out, and only to the public registries below.
+# Nothing from a network response is ever printed: output is limited to fixed strings
+# and HTTP status codes, so registry or web content cannot inject text into the session.
 
 set -euo pipefail
 
-usage() { echo "Usage: check-availability.sh <name> [domain|npm|pypi|github|crates|rubygems|wp|telegram ...]" >&2; exit 2; }
+usage() { echo "Usage: check-availability.sh <name> [domain|npm|pypi|github|ghrepo:<org>|crates|rubygems|wp|telegram ...]" >&2; exit 2; }
+
+# Print an untrusted value safely (no escape sequences reach the terminal).
+safe() { printf '%q' "$1"; }
+
+NAME_RE='^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$'
 
 [ $# -ge 1 ] || usage
-NAME=$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')
+NAME=$(printf '%s' "$1" | LC_ALL=C tr '[:upper:]' '[:lower:]')
 shift
 
 # Allow only DNS-label-style names: a-z, 0-9 and inner hyphens, 1-63 chars.
 # This blocks path, query, option and shell tricks in URLs and command arguments.
-if ! [[ "$NAME" =~ ^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$ ]]; then
-  echo "Invalid name: '$NAME' (use lowercase letters, digits and inner hyphens only, max 63 chars)" >&2
+if ! [[ "$NAME" =~ $NAME_RE ]]; then
+  echo "Invalid name: $(safe "$NAME") (use lowercase letters, digits and inner hyphens only, max 63 chars)" >&2
   exit 2
 fi
 
@@ -33,7 +40,9 @@ if [ $# -eq 0 ]; then
 else
   PLATFORMS=("$@")
 fi
-read -r -a TLD_LIST <<< "${TLDS:-com dev io}"
+TLD_LIST=()
+read -r -a TLD_LIST <<< "${TLDS:-com dev io}" || true
+[ ${#TLD_LIST[@]} -gt 0 ] || TLD_LIST=(com dev io)
 
 if [ -t 1 ]; then
   RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[0;33m'; NC='\033[0m'
@@ -41,14 +50,17 @@ else
   RED=''; GREEN=''; YELLOW=''; NC=''
 fi
 UA='naming-skill-availability-check/1.0'
-ok()   { echo -e "  ${GREEN}AVAILABLE${NC}  $1"; }
-taken(){ echo -e "  ${RED}TAKEN${NC}      $1"; }
-warn() { echo -e "  ${YELLOW}UNCLEAR${NC}    $1"; }
 
-# HTTPS only, no redirects to other protocols, bounded time.
+ok()   { printf '  %bAVAILABLE%b  %s\n' "$GREEN" "$NC" "$1"; }
+taken(){ printf '  %bTAKEN%b      %s\n' "$RED" "$NC" "$1"; }
+warn() { printf '  %bUNCLEAR%b    %s\n' "$YELLOW" "$NC" "$1"; }
+
+# curl: ignore ~/.curlrc (-q), no URL globbing (-g), HTTPS only (also on redirects),
+# bounded connect and total time.
+CURL=(curl -q -g -s --proto '=https' --proto-redir '=https' --connect-timeout 5 --max-time 10 -A "$UA")
+
 http_code() {
-  curl -s -o /dev/null --proto '=https' --proto-redir '=https' --max-time 15 -L -A "$UA" \
-       -w '%{http_code}' "$1" 2>/dev/null || echo "000"
+  "${CURL[@]}" -o /dev/null -L -w '%{http_code}' "$1" 2>/dev/null || echo "000"
 }
 
 # Map an HTTP status to a result: 404 = available, 200 = taken, else unclear.
@@ -61,6 +73,18 @@ report_http() {
   esac
 }
 
+# Prefer system binaries over whatever is first on PATH.
+pick_bin() {
+  local b
+  for b in "$@"; do
+    if [ -x "$b" ]; then echo "$b"; return; fi
+  done
+  command -v "$(basename "$1")" 2>/dev/null || true
+}
+PYTHON=$(pick_bin /usr/bin/python3)
+PERL=$(pick_bin /usr/bin/perl)
+WHOIS=$(pick_bin /usr/bin/whois)
+
 # RDAP server for a TLD: IANA's official bootstrap list, plus registries IANA does not list yet.
 RDAP_BOOTSTRAP=""
 rdap_base() {
@@ -69,8 +93,8 @@ rdap_base() {
     io) echo "https://rdap.identitydigital.services/rdap/"; return ;;
   esac
   [ -n "$RDAP_BOOTSTRAP" ] || return 0
-  command -v python3 >/dev/null 2>&1 || return 0
-  printf '%s' "$RDAP_BOOTSTRAP" | python3 -I -c '
+  [ -n "$PYTHON" ] || return 0
+  printf '%s' "$RDAP_BOOTSTRAP" | "$PYTHON" -I -c '
 import json, sys
 tld = sys.argv[1]
 try:
@@ -79,7 +103,7 @@ except ValueError:
     sys.exit(0)
 for tlds, urls in data.get("services", []):
     if tld in tlds:
-        https = [u for u in urls if u.startswith("https://")]
+        https = [u for u in urls if isinstance(u, str) and u.startswith("https://")]
         if https:
             print(https[0] if https[0].endswith("/") else https[0] + "/")
         break
@@ -87,16 +111,24 @@ for tlds, urls in data.get("services", []):
 }
 
 # whois fallback for TLDs without RDAP, with a hard time limit.
+# AVAILABLE only on an explicit "does not exist" answer; TAKEN only on real registration
+# fields; anything else (both, neither, refused) is UNCLEAR.
 whois_check() {
-  local domain="$1" out
-  if ! command -v whois >/dev/null 2>&1; then
-    warn "$domain (no RDAP server and whois not installed — check at a registrar)"
+  local domain="$1" out avail=0 reg=0
+  if [ -z "$WHOIS" ] || [ -z "$PERL" ]; then
+    warn "$domain (no RDAP server and whois/perl not available — check at a registrar)"
     return
   fi
-  out=$(perl -e 'alarm shift; exec @ARGV' 20 whois -- "$domain" 2>&1 || true)
-  if printf '%s' "$out" | grep -qiE "domain not found|no match for|not found\.|no data found|no entries found|status: *free|status: *available"; then
+  out=$(env -u PERL5OPT -u PERL5LIB "$PERL" -e 'alarm shift; exec @ARGV' 12 "$WHOIS" -- "$domain" 2>&1 || true)
+  if printf '%s' "$out" | grep -qiE "domain not found|no match for|no data found|no entries found|no object found|object does not exist|status: *free|status: *available|^not found"; then
+    avail=1
+  fi
+  if printf '%s' "$out" | grep -qiE "^[[:space:]]*(creation date|created on|registered on|registration date|registry expiry date|expiry date|registrar):[[:space:]]*[^[:space:]]|^[[:space:]]*status:[[:space:]]*connect"; then
+    reg=1
+  fi
+  if [ "$avail" = 1 ] && [ "$reg" = 0 ]; then
     ok "$domain (whois)"
-  elif printf '%s' "$out" | grep -qiE "^[[:space:]]*domain name:[[:space:]]*[a-z0-9]|^[[:space:]]*creation date:"; then
+  elif [ "$reg" = 1 ] && [ "$avail" = 0 ]; then
     taken "$domain (whois)"
   else
     warn "$domain (whois gave no clear answer — check at a registrar)"
@@ -110,11 +142,11 @@ for platform in "${PLATFORMS[@]}"; do
   case "$platform" in
     domain)
       if [ -z "$RDAP_BOOTSTRAP" ]; then
-        RDAP_BOOTSTRAP=$(curl -s --proto '=https' --max-time 15 https://data.iana.org/rdap/dns.json 2>/dev/null || true)
+        RDAP_BOOTSTRAP=$("${CURL[@]}" https://data.iana.org/rdap/dns.json 2>/dev/null || true)
       fi
       for tld in "${TLD_LIST[@]}"; do
         if ! [[ "$tld" =~ ^[a-z]{2,24}$ ]]; then
-          warn "invalid TLD '$tld' — skipped"
+          warn "invalid TLD $(safe "$tld") — skipped"
           continue
         fi
         base=$(rdap_base "$tld")
@@ -134,6 +166,14 @@ for platform in "${PLATFORMS[@]}"; do
     github)
       report_http "GitHub user/org: ${NAME}" "$(http_code "https://github.com/${NAME}")"
       ;;
+    ghrepo:*)
+      org=$(printf '%s' "${platform#ghrepo:}" | LC_ALL=C tr '[:upper:]' '[:lower:]')
+      if ! [[ "$org" =~ $NAME_RE ]]; then
+        warn "invalid GitHub org $(safe "$org") — skipped"
+        continue
+      fi
+      report_http "GitHub repo: ${org}/${NAME} (AVAILABLE = no public repo; only meaningful if you own the org)" "$(http_code "https://github.com/${org}/${NAME}")"
+      ;;
     crates)
       report_http "crates.io: ${NAME}" "$(http_code "https://crates.io/api/v1/crates/${NAME}")"
       ;;
@@ -141,8 +181,7 @@ for platform in "${PLATFORMS[@]}"; do
       report_http "RubyGems: ${NAME}" "$(http_code "https://rubygems.org/api/v1/gems/${NAME}.json")"
       ;;
     wp)
-      body=$(curl -s --proto '=https' --max-time 15 \
-        "https://api.wordpress.org/plugins/info/1.2/?action=plugin_information&slug=${NAME}" 2>/dev/null || true)
+      body=$("${CURL[@]}" "https://api.wordpress.org/plugins/info/1.2/?action=plugin_information&slug=${NAME}" 2>/dev/null || true)
       if printf '%s' "$body" | grep -qi "plugin not found"; then
         ok "WP plugin: ${NAME}"
       elif printf '%s' "$body" | grep -q "\"slug\""; then
@@ -152,7 +191,7 @@ for platform in "${PLATFORMS[@]}"; do
       fi
       ;;
     telegram)
-      body=$(curl -sL --proto '=https' --max-time 15 "https://t.me/${NAME}" 2>/dev/null || true)
+      body=$("${CURL[@]}" -L "https://t.me/${NAME}" 2>/dev/null || true)
       if printf '%s' "$body" | grep -q "tgme_page_title"; then
         taken "Telegram: @${NAME}"
       else
@@ -160,7 +199,7 @@ for platform in "${PLATFORMS[@]}"; do
       fi
       ;;
     *)
-      echo "  Unknown platform: $platform (valid: domain, npm, pypi, github, crates, rubygems, wp, telegram)"
+      echo "  Unknown platform: $(safe "$platform") (valid: domain, npm, pypi, github, ghrepo:<org>, crates, rubygems, wp, telegram)"
       ;;
   esac
 done

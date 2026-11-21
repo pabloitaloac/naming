@@ -18,22 +18,17 @@ When invoked, this skill guides Claude through a structured naming process:
 
 ## Install
 
-### As a project skill (this project only)
+This is a security-hardened fork of [glacierphonk/naming](https://github.com/glacierphonk/naming). The upstream repo has **not** been reviewed and pre-approves broader tool access — do not install it from upstream. See [SECURITY-AUDIT.md](SECURITY-AUDIT.md).
 
-Clone or copy the repo contents into your project's `.claude/skills/naming/` directory:
-
-```bash
-# From your project root
-mkdir -p .claude/skills
-git clone https://github.com/glacierphonk/naming.git .claude/skills/naming
-```
-
-### As a personal skill (all projects)
+Install as a personal skill (all projects), pinned to the reviewed commit listed in SECURITY-AUDIT.md:
 
 ```bash
 mkdir -p ~/.claude/skills
-git clone https://github.com/glacierphonk/naming.git ~/.claude/skills/naming
+git clone https://github.com/pabloitaloac/naming.git ~/.claude/skills/naming
+git -C ~/.claude/skills/naming checkout <reviewed-commit-sha>
 ```
+
+The skill's `allowed-tools` pre-approves reading only `~/.claude/skills/naming/**`, so install it at exactly that path.
 
 ## Usage
 

@@ -26,3 +26,7 @@ Paste the completed brief when the skill asks for context.
 **What platforms does the name need to work on?** (domain, npm, GitHub, Telegram, app stores, etc.)
 
 >
+
+**May candidate names be sent to third-party domain or trademark services?** (default: no)
+
+>
